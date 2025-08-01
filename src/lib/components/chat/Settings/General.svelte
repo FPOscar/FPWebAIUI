@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark'];
+	let themes = ['dark', 'light', 'oled-dark', 'findlay-park'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -130,17 +130,20 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		}
 
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
-
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
+		// Remove all theme classes
+		const allThemeClasses = ['dark', 'light', 'oled-dark', 'her', 'findlay-park'];
+		allThemeClasses.forEach((themeClass) => {
+			document.documentElement.classList.remove(themeClass);
 		});
+
+		// Apply the new theme class
+		if (_theme === 'findlay-park') {
+			document.documentElement.classList.add('findlay-park');
+		} else {
+			themeToApply.split(' ').forEach((e) => {
+				document.documentElement.classList.add(e);
+			});
+		}
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
@@ -160,7 +163,9 @@
 							? '#000000'
 							: _theme === 'her'
 								? '#983724'
-								: '#ffffff'
+								: _theme === 'findlay-park'
+									? '#E2DAD3'
+									: '#ffffff'
 				);
 			}
 		}
@@ -208,6 +213,7 @@
 						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 						<option value="light">☀️ {$i18n.t('Light')}</option>
 						<option value="her">🌷 Her</option>
+						<option value="findlay-park">🏞️ Findlay Park</option>
 						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
 					</select>

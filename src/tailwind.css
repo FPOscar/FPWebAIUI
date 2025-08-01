@@ -18,6 +18,34 @@
 	::file-selector-button {
 		border-color: var(--color-gray-200, currentColor);
 	}
+
+	/* Findlay Park theme color overrides */
+	html.findlay-park {
+		--color-gray-50: #E9E3DE;   /* Sidebar background */
+		--color-gray-100: #DDD4CD;  /* Lighter variants */
+		--color-gray-200: #D1C5BC;
+		--color-gray-300: #C5B6AB;
+		--color-gray-400: #B9A79A;
+		--color-gray-500: #AD9889;
+		--color-gray-600: #8B7A6F;
+		--color-gray-700: #6B5F56;
+		--color-gray-800: #4B443D;
+		--color-gray-850: #3A332E;
+		--color-gray-900: #2A221F;
+		--color-gray-950: #1A1410;
+	}
+
+	/* Findlay Park theme main background */
+	html.findlay-park .findlay-park-main {
+		background-color: #E2DAD3;
+		color: #4B443D;
+	}
+
+	/* Findlay Park theme sidebar */
+	html.findlay-park .findlay-park-sidebar {
+		background-color: #E9E3DE;
+		color: #4B443D;
+	}
 }
 
 @layer base {
