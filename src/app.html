@@ -57,6 +57,9 @@
 					document.documentElement.classList.add('dark');
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
+				} else if (localStorage.theme === 'findlay-park') {
+					document.documentElement.classList.add('findlay-park');
+					metaThemeColorTag.setAttribute('content', '#E2DAD3');
 				} else {
 					document.documentElement.classList.add('dark');
 					metaThemeColorTag.setAttribute('content', '#171717');
@@ -178,6 +181,10 @@
 
 	html.her #splash-screen {
 		background: #983724;
+	}
+
+	html.findlay-park #splash-screen {
+		background: #E2DAD3;
 	}
 
 	#logo-her {
