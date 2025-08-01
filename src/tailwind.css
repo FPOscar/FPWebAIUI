@@ -46,6 +46,15 @@
 		background-color: #E9E3DE;
 		color: #4B443D;
 	}
+
+	/* Findlay Park theme hover effects for interactive elements */
+	html.findlay-park .hover\\:bg-gray-100:hover {
+		background-color: var(--color-gray-200) !important;
+	}
+
+	html.findlay-park .hover\\:bg-gray-900:hover {
+		background-color: var(--color-gray-300) !important;
+	}
 }
 
 @layer base {
