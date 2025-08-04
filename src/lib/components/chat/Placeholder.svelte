@@ -14,7 +14,8 @@
 		temporaryChatEnabled,
 		selectedFolder,
 		chats,
-		currentChatPage
+		currentChatPage,
+		theme
 	} from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -82,6 +83,18 @@
 				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
+	{/if}
+
+	<!-- FP Logo Section -->
+	{#if !$theme.includes('dark') && $theme !== 'system' || ($theme === 'system' && !window.matchMedia('(prefers-color-scheme: dark)').matches)}
+		<div class="flex justify-center items-center mb-8">
+			<img
+				src="/fplogo.png"
+				alt="Findlay Park Logo"
+				class="h-32 w-auto object-contain drop-shadow-sm"
+				draggable="false"
+			/>
+		</div>
 	{/if}
 
 	<div
