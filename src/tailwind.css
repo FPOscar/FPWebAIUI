@@ -48,12 +48,12 @@
 	}
 
 	/* Findlay Park theme hover effects for interactive elements */
-	html.findlay-park .hover\\:bg-gray-100:hover {
-		background-color: var(--color-gray-200) !important;
+	html.findlay-park [class*="hover:bg-gray-100"]:hover {
+		background-color: var(--color-gray-200);
 	}
 
-	html.findlay-park .hover\\:bg-gray-900:hover {
-		background-color: var(--color-gray-300) !important;
+	html.findlay-park [class*="hover:bg-gray-900"]:hover {
+		background-color: var(--color-gray-300);
 	}
 }
 
