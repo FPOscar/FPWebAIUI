@@ -2299,6 +2299,32 @@ MISTRAL_OCR_API_KEY = PersistentConfig(
     os.getenv("MISTRAL_OCR_API_KEY", ""),
 )
 
+# Azure Mistral OCR
+AZURE_MISTRAL_OCR_API_KEY = PersistentConfig(
+    "AZURE_MISTRAL_OCR_API_KEY",
+    "rag.azure_mistral_ocr_api_key",
+    os.getenv("AZURE_MISTRAL_OCR_API_KEY", ""),
+)
+
+AZURE_MISTRAL_OCR_ENDPOINT = PersistentConfig(
+    "AZURE_MISTRAL_OCR_ENDPOINT",
+    "rag.azure_mistral_ocr_endpoint",
+    os.getenv("AZURE_MISTRAL_OCR_ENDPOINT", ""),
+)
+
+AZURE_MISTRAL_OCR_MODEL = PersistentConfig(
+    "AZURE_MISTRAL_OCR_MODEL",
+    "rag.azure_mistral_ocr_model",
+    os.getenv("AZURE_MISTRAL_OCR_MODEL", "mistral-document-ai-2505"),
+)
+
+AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64 = PersistentConfig(
+    "AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64",
+    "rag.azure_mistral_ocr_include_image_base64",
+    os.getenv("AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64", "false").lower()
+    in ["1", "true", "yes"],
+)
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_EMBEDDING_AND_RETRIEVAL",
     "rag.bypass_embedding_and_retrieval",

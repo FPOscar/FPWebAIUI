@@ -26,6 +26,7 @@ from langchain_core.documents import Document
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.azure_mistral import AzureMistralLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 
 
@@ -360,6 +361,19 @@ class Loader:
         ):
             loader = MistralLoader(
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
+            )
+        elif (
+            self.engine == "mistral_ocr_azure"
+            and self.kwargs.get("AZURE_MISTRAL_OCR_API_KEY") != ""
+            and self.kwargs.get("AZURE_MISTRAL_OCR_ENDPOINT") != ""
+            and file_ext in ["pdf"]
+        ):
+            loader = AzureMistralLoader(
+                api_key=self.kwargs.get("AZURE_MISTRAL_OCR_API_KEY"),
+                endpoint=self.kwargs.get("AZURE_MISTRAL_OCR_ENDPOINT"),
+                file_path=file_path,
+                model=self.kwargs.get("AZURE_MISTRAL_OCR_MODEL", "mistral-document-ai-2505"),
+                include_image_base64=self.kwargs.get("AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64", False),
             )
         elif (
             self.engine == "external"

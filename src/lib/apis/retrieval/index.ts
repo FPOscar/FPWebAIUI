@@ -57,6 +57,12 @@ type RAGConfigForm = {
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
 	youtube?: YoutubeConfigForm;
+	CONTENT_EXTRACTION_ENGINE?: string;
+	MISTRAL_OCR_API_KEY?: string;
+	AZURE_MISTRAL_OCR_API_KEY?: string;
+	AZURE_MISTRAL_OCR_ENDPOINT?: string;
+	AZURE_MISTRAL_OCR_MODEL?: string;
+	AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64?: boolean;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
