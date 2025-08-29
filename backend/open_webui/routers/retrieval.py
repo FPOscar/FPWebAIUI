@@ -435,6 +435,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        "AZURE_MISTRAL_OCR_API_KEY": request.app.state.config.AZURE_MISTRAL_OCR_API_KEY,
+        "AZURE_MISTRAL_OCR_ENDPOINT": request.app.state.config.AZURE_MISTRAL_OCR_ENDPOINT,
+        "AZURE_MISTRAL_OCR_MODEL": request.app.state.config.AZURE_MISTRAL_OCR_MODEL,
+        "AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64": request.app.state.config.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -605,6 +609,10 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
+    AZURE_MISTRAL_OCR_API_KEY: Optional[str] = None
+    AZURE_MISTRAL_OCR_ENDPOINT: Optional[str] = None
+    AZURE_MISTRAL_OCR_MODEL: Optional[str] = None
+    AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64: Optional[bool] = None
 
     # Reranking settings
     RAG_RERANKING_MODEL: Optional[str] = None
@@ -814,6 +822,27 @@ async def update_rag_config(
         form_data.MISTRAL_OCR_API_KEY
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
+    )
+
+    request.app.state.config.AZURE_MISTRAL_OCR_API_KEY = (
+        form_data.AZURE_MISTRAL_OCR_API_KEY
+        if form_data.AZURE_MISTRAL_OCR_API_KEY is not None
+        else request.app.state.config.AZURE_MISTRAL_OCR_API_KEY
+    )
+    request.app.state.config.AZURE_MISTRAL_OCR_ENDPOINT = (
+        form_data.AZURE_MISTRAL_OCR_ENDPOINT
+        if form_data.AZURE_MISTRAL_OCR_ENDPOINT is not None
+        else request.app.state.config.AZURE_MISTRAL_OCR_ENDPOINT
+    )
+    request.app.state.config.AZURE_MISTRAL_OCR_MODEL = (
+        form_data.AZURE_MISTRAL_OCR_MODEL
+        if form_data.AZURE_MISTRAL_OCR_MODEL is not None
+        else request.app.state.config.AZURE_MISTRAL_OCR_MODEL
+    )
+    request.app.state.config.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64 = (
+        form_data.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64
+        if form_data.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64 is not None
+        else request.app.state.config.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64
     )
 
     # Reranking settings
@@ -1071,6 +1100,10 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        "AZURE_MISTRAL_OCR_API_KEY": request.app.state.config.AZURE_MISTRAL_OCR_API_KEY,
+        "AZURE_MISTRAL_OCR_ENDPOINT": request.app.state.config.AZURE_MISTRAL_OCR_ENDPOINT,
+        "AZURE_MISTRAL_OCR_MODEL": request.app.state.config.AZURE_MISTRAL_OCR_MODEL,
+        "AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64": request.app.state.config.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64,
         # Reranking settings
         "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
         "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
@@ -1464,6 +1497,10 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                    AZURE_MISTRAL_OCR_API_KEY=request.app.state.config.AZURE_MISTRAL_OCR_API_KEY,
+                    AZURE_MISTRAL_OCR_ENDPOINT=request.app.state.config.AZURE_MISTRAL_OCR_ENDPOINT,
+                    AZURE_MISTRAL_OCR_MODEL=request.app.state.config.AZURE_MISTRAL_OCR_MODEL,
+                    AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64=request.app.state.config.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path

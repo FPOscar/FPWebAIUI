@@ -198,6 +198,14 @@
 			return;
 		}
 
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr_azure' &&
+			(RAGConfig.AZURE_MISTRAL_OCR_ENDPOINT === '' || RAGConfig.AZURE_MISTRAL_OCR_API_KEY === '')
+		) {
+			toast.error($i18n.t('Azure Mistral OCR Endpoint and API Key required.'));
+			return;
+		}
+
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
 		}
@@ -328,6 +336,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="mistral_ocr_azure">{$i18n.t('Mistral OCR (Azure)')}</option>
 								</select>
 							</div>
 						</div>
@@ -512,6 +521,40 @@
 										<option value="json">{$i18n.t('JSON')}</option>
 										<option value="html">{$i18n.t('HTML')}</option>
 									</select>
+								</div>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Mistral API Key')}
+									required={false}
+									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
+								/>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mistral_ocr_azure'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Azure Mistral OCR Endpoint')}
+									bind:value={RAGConfig.AZURE_MISTRAL_OCR_ENDPOINT}
+								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Azure Mistral OCR API Key')}
+									required={false}
+									bind:value={RAGConfig.AZURE_MISTRAL_OCR_API_KEY}
+								/>
+							</div>
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Azure Mistral OCR Model ID')}
+									bind:value={RAGConfig.AZURE_MISTRAL_OCR_MODEL}
+								/>
+							</div>
+							<div class="flex justify-between w-full mt-2">
+								<div class="self-center text-xs font-medium">{$i18n.t('Include Image Base64')}</div>
+								<div class="flex items-center relative">
+									<Switch bind:state={RAGConfig.AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64} />
 								</div>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
