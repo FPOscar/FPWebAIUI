@@ -99,12 +99,13 @@ class AzureMistralLoader:
             with open(self.file_path, "rb") as f:
                 file_bytes = f.read()
             b64 = base64.b64encode(file_bytes).decode("utf-8")
+            data_url = f"data:application/pdf;base64,{b64}"
 
             payload: Dict[str, Any] = {
                 "model": self.model,
                 "document": {
-                    "type": "document_base64",
-                    "document_base64": b64,
+                    "type": "document_url",
+                    "document_url": data_url,
                 },
                 "include_image_base64": self.include_image_base64,
             }
