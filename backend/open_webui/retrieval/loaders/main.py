@@ -229,6 +229,7 @@ class DoclingLoader:
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
+        self.user = kwargs.get("user", None)
         self.kwargs = kwargs
 
     def load(
@@ -265,6 +266,7 @@ class Loader:
                 url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 mime_type=file_content_type,
+                user=self.user,
             )
         elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
@@ -273,7 +275,6 @@ class Loader:
                 loader = TikaLoader(
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
-                    mime_type=file_content_type,
                     extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
         elif (
@@ -370,14 +371,8 @@ class Loader:
                     azure_credential=DefaultAzureCredential(),
                 )
         elif self.engine == "mineru" and file_ext in [
-            "pdf",
-            "doc",
-            "docx",
-            "ppt",
-            "pptx",
-            "xls",
-            "xlsx",
-        ]:
+            "pdf"
+        ]:  # MinerU currently only supports PDF
             loader = MinerULoader(
                 file_path=file_path,
                 api_mode=self.kwargs.get("MINERU_API_MODE", "local"),
@@ -392,9 +387,8 @@ class Loader:
             in ["pdf"]  # Mistral OCR currently only supports PDF and images
         ):
             loader = MistralLoader(
-                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
-            )
-        elif (
+                base_url=self.kwargs.get("MISTRAL_OCR_API_BASE_URL"),
+                    elif (
             self.engine == "mistral_ocr_azure"
             and self.kwargs.get("AZURE_MISTRAL_OCR_API_KEY") != ""
             and self.kwargs.get("AZURE_MISTRAL_OCR_ENDPOINT") != ""
@@ -407,14 +401,8 @@ class Loader:
                 model=self.kwargs.get("AZURE_MISTRAL_OCR_MODEL", "mistral-document-ai-2505"),
                 include_image_base64=self.kwargs.get("AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64", False),
             )
-        elif (
-            self.engine == "external"
-            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
-            and file_ext
-            in ["pdf"]  # Mistral OCR currently only supports PDF and images
-        ):
-            loader = MistralLoader(
-                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
+    api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"),
+                file_path=file_path,
             )
         else:
             if file_ext == "pdf":
