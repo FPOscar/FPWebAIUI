@@ -1627,38 +1627,15 @@
 								<div class="self-end flex space-x-1 mr-1 shrink-0">
 									{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 										<!-- {$i18n.t('Record voice')} -->
-										<Tooltip content={$i18n.t('Dictate')}>
+										<Tooltip content="Podcast Gen">
 											<button
 												id="voice-input-button"
 												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 												type="button"
-												on:click={async () => {
-													try {
-														let stream = await navigator.mediaDevices
-															.getUserMedia({ audio: true })
-															.catch(function (err) {
-																toast.error(
-																	$i18n.t(
-																		`Permission denied when accessing microphone: {{error}}`,
-																		{
-																			error: err
-																		}
-																	)
-																);
-																return null;
-															});
-
-														if (stream) {
-															recording = true;
-															const tracks = stream.getTracks();
-															tracks.forEach((track) => track.stop());
-														}
-														stream = null;
-													} catch {
-														toast.error($i18n.t('Permission denied when accessing microphone'));
-													}
+												on:click={() => {
+													window.open('https://fpaipodcastgen.azurewebsites.net/', '_blank');
 												}}
-												aria-label="Voice Input"
+												aria-label="Podcast Gen"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
