@@ -1629,10 +1629,12 @@
 										<!-- {$i18n.t('Record voice')} -->
 										<Tooltip content="Podcast Gen">
 											<button
-												id="voice-input-button"
+												id="podcast-gen-button"
 												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 												type="button"
-												on:click={() => {
+												on:click={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
 													window.open('https://fpaipodcastgen.azurewebsites.net/', '_blank');
 												}}
 												aria-label="Podcast Gen"
