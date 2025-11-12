@@ -229,9 +229,10 @@
 
 					speech.onend = () => {
 						speaking = false;
-						if ($settings.conversationMode) {
-							document.getElementById('voice-input-button')?.click();
-						}
+						// Removed automatic voice input trigger - button is now for Podcast Gen
+						// if ($settings.conversationMode) {
+						// 	document.getElementById('voice-input-button')?.click();
+						// }
 					};
 
 					if (voice) {
