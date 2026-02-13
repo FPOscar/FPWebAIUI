@@ -90,6 +90,7 @@
 	import { goto } from '$app/navigation';
 	import InputModal from '../common/InputModal.svelte';
 	import Expand from '../icons/Expand.svelte';
+	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -121,6 +122,11 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
+	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let onQueueSendNow: (id: string) => void = () => {};
+	export let onQueueEdit: (id: string) => void = () => {};
+	export let onQueueDelete: (id: string) => void = () => {};
+
 	let inputContent = null;
 
 	let showInputVariablesModal = false;
@@ -145,7 +151,7 @@
 				return {
 					...file,
 					user: undefined,
-					access_control: undefined
+					access_grants: undefined
 				};
 			}),
 		selectedToolIds,
@@ -219,6 +225,14 @@
 		if (text.includes('{{USER_NAME}}')) {
 			const name = sessionUser?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (text.includes('{{USER_EMAIL}}')) {
+			const email = sessionUser?.email || '';
+
+			if (email) {
+				text = text.replaceAll('{{USER_EMAIL}}', email);
+			}
 		}
 
 		if (text.includes('{{USER_BIO}}')) {
@@ -376,7 +390,8 @@
 
 	let command = '';
 	export let showCommands = false;
-	$: showCommands = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
+	$: showCommands =
+		['/', '#', '@', '$'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
 
 	let showTools = false;
@@ -727,9 +742,7 @@
 					let imageUrl = event.target.result;
 
 					// Compress the image if settings or config require it
-					if ($settings?.imageCompression && $settings?.imageCompressionInChannels) {
-						imageUrl = await compressImageHandler(imageUrl, $settings, $config);
-					}
+					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
 					if ($temporaryChatEnabled) {
 						files = [
@@ -932,6 +945,18 @@
 						}
 					}
 				})
+			},
+			{
+				char: '$',
+				render: getSuggestionRenderer(CommandSuggestionList, {
+					i18n,
+					onSelect: (e) => {
+						document.getElementById('chat-input')?.focus();
+					},
+
+					insertTextHandler: insertTextAtCursor,
+					onUpload: () => {}
+				})
 			}
 		];
 		loaded = true;
@@ -1113,6 +1138,23 @@
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
 						/>
+
+						<!-- Queued messages display -->
+						{#if messageQueue.length > 0}
+							<div
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-gray-900/60 border border-gray-800/50 overflow-hidden"
+							>
+								{#each messageQueue as queuedMessage (queuedMessage.id)}
+									<QueuedMessageItem
+										id={queuedMessage.id}
+										content={queuedMessage.prompt}
+										onSendNow={onQueueSendNow}
+										onEdit={onQueueEdit}
+										onDelete={onQueueDelete}
+									/>
+								{/each}
+							</div>
+						{/if}
 
 						<div
 							id="message-input-container"
@@ -1603,7 +1645,7 @@
 															<div class="size-4 items-center flex justify-center">
 																<img
 																	src={filter.icon}
-																	class="size-3.5 {filter.icon.includes('svg')
+																	class="size-3.5 {filter.icon.includes('data:image/svg')
 																		? 'dark:invert-[80%]'
 																		: ''}"
 																	style="fill: currentColor;"
@@ -1685,61 +1727,79 @@
 									</div>
 								</div>
 
-								<div class="self-end flex space-x-1 mr-1 shrink-0">
-									{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-										<!-- {$i18n.t('Record voice')} -->
-										<Tooltip content="Podcast Gen">
-											<button
-												id="podcast-gen-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
-												type="button"
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													window.open('https://fpaipodcastgen.azurewebsites.net/', '_blank');
-												}}
-												aria-label="Podcast Gen"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-5 h-5 translate-y-[0.5px]"
+								<div class="self-end flex space-x-1 mr-1 shrink-0 gap-[0.5px]">
+									{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
+										<div class=" flex items-center">
+											<Tooltip content={$i18n.t('Stop')}>
+												<button
+													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+													on:click={() => {
+														stopResponse();
+													}}
 												>
-													<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-													<path
-														d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-									{/if}
-
-										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true) || generating}
-											<div class=" flex items-center">
-												<Tooltip content={$i18n.t('Stop')}>
-													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-														on:click={() => {
-															stopResponse();
-														}}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 24 24"
+														fill="currentColor"
+														class="size-5"
 													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-5"
-														>
-															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
-															/>
-														</svg>
-													</button>
-												</Tooltip>
-											</div>
-										{:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+														<path
+															fill-rule="evenodd"
+															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										</div>
+									{:else}
+										{#if prompt !== '' && !history?.currentId && ($config?.features?.enable_notes ?? false) && ($_user?.role === 'admin' || ($_user?.permissions?.features?.notes ?? true))}
+											<!-- {$i18n.t('Create Note')}  -->
+											<Tooltip content={$i18n.t('Create note')} className=" flex items-center">
+												<button
+													id="create-note-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center"
+													type="button"
+													disabled={prompt === '' && files.length === 0}
+													on:click={() => {
+														createNote();
+													}}
+												>
+													<PageEdit className="size-4.5 translate-y-[0.5px]" />
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+											<!-- Podcast Gen -->
+											<Tooltip content="Podcast Gen">
+												<button
+													id="podcast-gen-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													type="button"
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														window.open('https://fpaipodcastgen.azurewebsites.net/', '_blank');
+													}}
+													aria-label="Podcast Gen"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-5 h-5 translate-y-[0.5px]"
+													>
+														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+														<path
+															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+														/>
+													</svg>
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip content="Talk to Charlie">
@@ -1782,9 +1842,10 @@
 												</Tooltip>
 											</div>
 										{/if}
-									</div>
+									{/if}
 								</div>
 							</div>
+						</div>
 
 						{#if $config?.license_metadata?.input_footer}
 							<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
