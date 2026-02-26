@@ -42,6 +42,7 @@
 	let RAG_EMBEDDING_MODEL = '';
 	let RAG_EMBEDDING_BATCH_SIZE = 1;
 	let ENABLE_ASYNC_EMBEDDING = true;
+	let RAG_EMBEDDING_CONCURRENT_REQUESTS = 0;
 
 	let rerankingModel = '';
 
@@ -104,7 +105,8 @@
 			RAG_EMBEDDING_ENGINE,
 			RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE,
-			ENABLE_ASYNC_EMBEDDING
+			ENABLE_ASYNC_EMBEDDING,
+			RAG_EMBEDDING_CONCURRENT_REQUESTS
 		});
 
 		updateEmbeddingModelLoading = true;
@@ -113,6 +115,7 @@
 			RAG_EMBEDDING_MODEL: RAG_EMBEDDING_MODEL,
 			RAG_EMBEDDING_BATCH_SIZE: RAG_EMBEDDING_BATCH_SIZE,
 			ENABLE_ASYNC_EMBEDDING: ENABLE_ASYNC_EMBEDDING,
+			RAG_EMBEDDING_CONCURRENT_REQUESTS: RAG_EMBEDDING_CONCURRENT_REQUESTS,
 			ollama_config: {
 				key: OllamaKey,
 				url: OllamaUrl
@@ -249,6 +252,7 @@
 			RAG_EMBEDDING_MODEL = embeddingConfig.RAG_EMBEDDING_MODEL;
 			RAG_EMBEDDING_BATCH_SIZE = embeddingConfig.RAG_EMBEDDING_BATCH_SIZE ?? 1;
 			ENABLE_ASYNC_EMBEDDING = embeddingConfig.ENABLE_ASYNC_EMBEDDING ?? true;
+			RAG_EMBEDDING_CONCURRENT_REQUESTS = embeddingConfig.RAG_EMBEDDING_CONCURRENT_REQUESTS ?? 0;
 
 			OpenAIKey = embeddingConfig.openai_config.key;
 			OpenAIUrl = embeddingConfig.openai_config.url;
@@ -344,7 +348,7 @@
 							</div>
 							<div class="">
 								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
@@ -386,7 +390,7 @@
 									</div>
 									<div class="">
 										<select
-											class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+											class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 											bind:value={RAGConfig.PDF_LOADER_MODE}
 										>
 											<option value="page">{$i18n.t('Page')}</option>
@@ -557,7 +561,7 @@
 								</div>
 								<div class="">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 										bind:value={RAGConfig.DATALAB_MARKER_OUTPUT_FORMAT}
 									>
 										<option value="markdown">{$i18n.t('Markdown')}</option>
@@ -698,7 +702,7 @@
 										{$i18n.t('API Mode')}
 									</div>
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
+										class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden"
 										bind:value={RAGConfig.MINERU_API_MODE}
 										on:change={() => {
 											// Auto-update URL when switching modes if it's empty or matches the opposite mode's default
@@ -804,7 +808,7 @@
 							<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 							<div class="flex items-center relative">
 								<select
-									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+									class="w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 									bind:value={RAGConfig.TEXT_SPLITTER}
 								>
 									<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
@@ -910,7 +914,7 @@
 								</div>
 								<div class="flex items-center relative">
 									<select
-										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+										class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={RAG_EMBEDDING_ENGINE}
 										placeholder={$i18n.t('Select an embedding model engine')}
 										on:change={(e) => {
@@ -1086,6 +1090,28 @@
 									<Switch bind:state={ENABLE_ASYNC_EMBEDDING} />
 								</div>
 							</div>
+
+							<div class="  mb-2.5 flex w-full justify-between">
+								<div class="self-center text-xs font-medium">
+									<Tooltip
+										content={$i18n.t(
+											'Limits the number of concurrent embedding requests. Set to 0 for unlimited.'
+										)}
+										placement="top-start"
+									>
+										{$i18n.t('Embedding Concurrent Requests')}
+									</Tooltip>
+								</div>
+								<div class="">
+									<input
+										bind:value={RAG_EMBEDDING_CONCURRENT_REQUESTS}
+										type="number"
+										class=" bg-transparent text-center w-14 outline-none"
+										min="0"
+										step="1"
+									/>
+								</div>
+							</div>
 						{/if}
 					</div>
 
@@ -1142,7 +1168,7 @@
 										</div>
 										<div class="flex items-center relative">
 											<select
-												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+												class="w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 												placeholder={$i18n.t('Select a reranking model engine')}
 												on:change={(e) => {

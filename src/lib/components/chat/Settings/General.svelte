@@ -209,7 +209,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
 							? ''
 							: 'outline-hidden'}"
 						bind:value={selectedTheme}
@@ -230,7 +230,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
+						class="w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent text-right {$settings.highContrastMode
 							? ''
 							: 'outline-hidden'}"
 						bind:value={lang}
@@ -274,6 +274,8 @@
 							toggleNotification();
 						}}
 						type="button"
+						role="switch"
+						aria-checked={notificationEnabled}
 					>
 						{#if notificationEnabled === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -311,6 +313,7 @@
 							? 'text-gray-800 dark:text-gray-100'
 							: 'text-gray-400 dark:text-gray-500'}"
 						type="button"
+						aria-expanded={showAdvanced}
 						on:click={() => {
 							showAdvanced = !showAdvanced;
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
