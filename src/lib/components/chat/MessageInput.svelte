@@ -1803,8 +1803,13 @@
 											</Tooltip>
 										{/if}
 
-										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
-											<!-- Podcast Gen -->
+									{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+										<!-- Terminal Server Selector -->
+										{#if ($terminalServers ?? []).length > 0 || ($settings?.terminalServers ?? []).some((s) => s.url)}
+											<TerminalMenu bind:show={showTerminalMenu} />
+										{/if}
+
+										<!-- Podcast Gen -->
 											<Tooltip content="Podcast Gen">
 												<button
 													id="podcast-gen-button"
