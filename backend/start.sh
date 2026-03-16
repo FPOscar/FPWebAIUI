@@ -45,12 +45,42 @@ if [[ "${USE_CUDA_DOCKER,,}" == "true" ]]; then
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib"
 fi
 
+resolve_python_cmd() {
+  local candidate resolved
+
+  # Prefer an interpreter that can already import uvicorn to avoid PATH
+  # mismatches in containers that have multiple Python installations.
+  for candidate in "${PYTHON_CMD:-}" /usr/local/bin/python3 python3 python; do
+    if [ -z "$candidate" ]; then
+      continue
+    fi
+
+    if [ -x "$candidate" ]; then
+      resolved="$candidate"
+    else
+      resolved=$(command -v "$candidate" 2>/dev/null) || continue
+    fi
+
+    if "$resolved" -c "import uvicorn" >/dev/null 2>&1; then
+      printf '%s\n' "$resolved"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+if ! PYTHON_CMD=$(resolve_python_cmd); then
+  echo "Unable to find a Python interpreter with uvicorn installed." >&2
+  exit 1
+fi
+
 # Check if SPACE_ID is set, if so, configure for space
 if [ -n "$SPACE_ID" ]; then
   echo "Configuring for HuggingFace Space deployment"
   if [ -n "$ADMIN_USER_EMAIL" ] && [ -n "$ADMIN_USER_PASSWORD" ]; then
     echo "Admin user configured, creating"
-    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" "$PYTHON_CMD" -m uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
     webui_pid=$!
     echo "Waiting for webui to start..."
     while ! curl -s "http://localhost:${PORT}/health" > /dev/null; do
@@ -69,7 +99,6 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-PYTHON_CMD=$(command -v python3 || command -v python)
 UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
 
 # If script is called with arguments, use them; otherwise use default workers
