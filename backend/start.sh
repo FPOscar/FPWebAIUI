@@ -70,6 +70,34 @@ resolve_python_cmd() {
   return 1
 }
 
+normalize_uvicorn_workers() {
+  local workers="${1:-1}"
+
+  if ! [[ "$workers" =~ ^[1-9][0-9]*$ ]]; then
+    echo "Invalid UVICORN_WORKERS value '$workers', defaulting to 1."
+    printf '%s\n' "1"
+    return 0
+  fi
+
+  printf '%s\n' "$workers"
+}
+
+sanitize_startup_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      bash|/bin/bash|sh|/bin/sh|start.sh|./start.sh)
+        echo "Ignoring redundant startup arg: $1"
+        shift
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+
+  printf '%s\0' "$@"
+}
+
 if ! PYTHON_CMD=$(resolve_python_cmd); then
   echo "Unable to find a Python interpreter with uvicorn installed." >&2
   exit 1
@@ -99,14 +127,21 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-UVICORN_WORKERS="${UVICORN_WORKERS:-1}"
+UVICORN_WORKERS=$(normalize_uvicorn_workers "${UVICORN_WORKERS:-1}")
 
 # If script is called with arguments, use them; otherwise use default workers
 if [ "$#" -gt 0 ]; then
-    ARGS=("$@")
+    mapfile -d '' -t ARGS < <(sanitize_startup_args "$@")
 else
     ARGS=(--workers "$UVICORN_WORKERS")
 fi
+
+if [ "${#ARGS[@]}" -eq 0 ]; then
+    ARGS=(--workers "$UVICORN_WORKERS")
+fi
+
+echo "Using Python interpreter: $PYTHON_CMD"
+echo "Launching uvicorn with args: ${ARGS[*]}"
 
 # Run uvicorn
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
