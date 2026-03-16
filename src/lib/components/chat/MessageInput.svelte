@@ -508,10 +508,16 @@
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
+		!$selectedTerminalId &&
 		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
 			codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
+	// Disable code interpreter when terminal is active (mutually exclusive)
+	$: if ($selectedTerminalId && codeInterpreterEnabled) {
+		codeInterpreterEnabled = false;
+	}
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -1175,12 +1181,13 @@
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-hidden"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
 							>
 								{#each messageQueue as queuedMessage (queuedMessage.id)}
 									<QueuedMessageItem
 										id={queuedMessage.id}
 										content={queuedMessage.prompt}
+										files={queuedMessage.files}
 										onSendNow={onQueueSendNow}
 										onEdit={onQueueEdit}
 										onDelete={onQueueDelete}
