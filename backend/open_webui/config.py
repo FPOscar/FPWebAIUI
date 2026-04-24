@@ -2853,6 +2853,18 @@ AZURE_MISTRAL_OCR_INCLUDE_IMAGE_BASE64 = PersistentConfig(
     in ["1", "true", "yes"],
 )
 
+PADDLEOCR_VL_BASE_URL = PersistentConfig(
+    'PADDLEOCR_VL_BASE_URL',
+    'rag.paddleocr_vl_base_url',
+    os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:8080'),
+)
+
+PADDLEOCR_VL_TOKEN = PersistentConfig(
+    'PADDLEOCR_VL_TOKEN',
+    'rag.paddleocr_vl_token',
+    os.getenv('PADDLEOCR_VL_TOKEN', ''),
+)
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     'BYPASS_EMBEDDING_AND_RETRIEVAL',
     'rag.bypass_embedding_and_retrieval',
