@@ -218,6 +218,15 @@
 		loadingSpeech = false;
 	};
 
+	const handleSpeechEnded = (signal?: AbortSignal) => {
+		speaking = false;
+		speakingIdx = undefined;
+
+		if (!signal?.aborted && $settings.conversationMode) {
+			document.getElementById('voice-input-button')?.click();
+		}
+	};
+
 	// Resolve voice: model-specific > user settings > config default
 	const getVoiceId = () =>
 		model?.info?.meta?.tts?.voice ??
@@ -250,10 +259,7 @@
 					speech.rate = $settings.audio?.tts?.playbackRate ?? 1;
 
 					speech.onend = () => {
-						speaking = false;
-						if ($settings.conversationMode) {
-							document.getElementById('voice-input-button')?.click();
-						}
+						handleSpeechEnded(signal);
 					};
 
 					if (voice) {
@@ -266,9 +272,13 @@
 		} else {
 			$audioQueue.setId(`${message.id}`);
 			$audioQueue.setPlaybackRate($settings.audio?.tts?.playbackRate ?? 1);
-			$audioQueue.onStopped = () => {
-				speaking = false;
-				speakingIdx = undefined;
+			$audioQueue.onStopped = ({ event }) => {
+				if (event === 'empty-queue') {
+					handleSpeechEnded(signal);
+				} else {
+					speaking = false;
+					speakingIdx = undefined;
+				}
 			};
 
 			loadingSpeech = true;
