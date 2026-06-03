@@ -121,11 +121,11 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
-					<!-- FP Logo in Navbar -->
+					<!-- Open WebUI logo in Navbar -->
 					<div class="flex-shrink-0">
 						<img
 							src="/fplogo.png"
-							alt="Findlay Park Logo"
+							alt="Open WebUI Logo"
 							class="h-8 w-auto object-contain"
 							draggable="false"
 						/>

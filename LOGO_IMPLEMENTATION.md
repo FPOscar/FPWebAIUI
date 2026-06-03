@@ -1,7 +1,7 @@
 # FP Logo Implementation in Main Chat UI
 
 ## Overview
-I have successfully implemented the Findlay Park logo (`fplogo.png`) in more prominent places within the main chat UI to improve brand visibility and user experience.
+I have successfully implemented the Open WebUI logo (`fplogo.png`) in more prominent places within the main chat UI to improve brand visibility and user experience.
 
 ## Changes Made
 
@@ -19,7 +19,7 @@ Added the FP logo prominently at the top of the main chat interface:
 <div class="flex justify-center items-center mb-8">
     <img
         src="{WEBUI_BASE_URL}/static/fplogo.png"
-        alt="Findlay Park Logo"
+        alt="Open WebUI Logo"
         class="h-16 w-auto object-contain drop-shadow-sm"
         draggable="false"
     />
@@ -40,7 +40,7 @@ Added the FP logo to the navigation bar for persistent brand presence:
 <div class="flex-shrink-0">
     <img
         src="/static/fplogo.png"
-        alt="Findlay Park Logo"
+        alt="Open WebUI Logo"
         class="h-8 w-auto object-contain"
         draggable="false"
     />
@@ -67,7 +67,7 @@ Added the FP logo to the navigation bar for persistent brand presence:
 - No breaking changes to existing functionality
 
 ## Benefits
-1. **Enhanced Brand Visibility**: The Findlay Park logo is now prominently displayed in the main chat interface
+1. **Enhanced Brand Visibility**: The Open WebUI logo is now prominently displayed in the main chat interface
 2. **Professional Appearance**: Improved visual hierarchy and brand consistency
 3. **User Experience**: Logo provides visual anchor point and reinforces brand identity
 4. **Non-Intrusive**: Implementation doesn't interfere with existing chat functionality

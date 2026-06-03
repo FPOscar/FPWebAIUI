@@ -2,7 +2,7 @@
 
 ## ✅ Successfully Implemented
 
-I have successfully implemented the Findlay Park logo (`fplogo.png`) in prominent locations within the main chat UI. Here's what was accomplished:
+I have successfully implemented the Open WebUI logo (`fplogo.png`) in prominent locations within the main chat UI. Here's what was accomplished:
 
 ## 🎯 Key Changes Made
 
@@ -60,7 +60,7 @@ The implementation uses:
 
 When users visit the chat interface, they will now see:
 
-1. **On First Visit (Empty Chat)**: Large Findlay Park logo prominently displayed above the greeting text
+1. **On First Visit (Empty Chat)**: Large Open WebUI logo prominently displayed above the greeting text
 2. **During Conversations**: Smaller logo in the top navigation bar for continued brand presence
 3. **All Screen Sizes**: Responsive design ensures proper logo display on desktop, tablet, and mobile
 
