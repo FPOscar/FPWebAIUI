@@ -68,15 +68,15 @@
 					<Marquee
 						duration={5000}
 						words={[
-							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Welcome to Open WebUI'),
 							$i18n.t('Hello!'),
-							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Welcome to Open WebUI'),
 							$i18n.t('Hi!'),
-							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Welcome to Open WebUI'),
 							$i18n.t('Hello!'),
-							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Welcome to Open WebUI'),
 							$i18n.t('Hi!'),
-							$i18n.t('Welcome to Findlay Park AI'),
+							$i18n.t('Welcome to Open WebUI'),
 							$i18n.t('Hello!')
 						]}
 					/>
