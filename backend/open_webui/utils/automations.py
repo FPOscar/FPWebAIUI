@@ -550,7 +550,7 @@ async def _check_calendar_alerts(app) -> None:
 
         # Send webhook notification if user has one configured
         try:
-            webui_name = getattr(app.state, 'WEBUI_NAME', 'Open WebUI')
+            webui_name = getattr(app.state, 'WEBUI_NAME', 'Findlay Park AI')
             enable_user_webhooks = getattr(app.state.config, 'ENABLE_USER_WEBHOOKS', False)
 
             if enable_user_webhooks:
