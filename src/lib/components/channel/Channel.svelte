@@ -77,6 +77,27 @@
 		);
 	};
 
+	const pinHandler = (
+		messageId: string,
+		pinned: boolean,
+		pinnedBy: string | null = pinned ? ($user?.id ?? null) : null,
+		pinnedAt: number | null = pinned ? Date.now() * 1000000 : null
+	) => {
+		if (messages) {
+			messages = messages.map((message) => {
+				if (message.id === messageId) {
+					return {
+						...message,
+						is_pinned: pinned,
+						pinned_by: pinnedBy,
+						pinned_at: pinnedAt
+					};
+				}
+				return message;
+			});
+		}
+	};
+
 	const initHandler = async () => {
 		if (currentId) {
 			updateLastReadAt(currentId);
@@ -306,17 +327,7 @@
 		<Pane defaultSize={50} minSize={50} class="h-full flex flex-col w-full relative">
 			<Navbar
 				{channel}
-				onPin={(messageId, pinned) => {
-					messages = messages.map((message) => {
-						if (message.id === messageId) {
-							return {
-								...message,
-								is_pinned: pinned
-							};
-						}
-						return message;
-					});
-				}}
+				onPin={pinHandler}
 				onUpdate={async () => {
 					channel = await getChannelById(localStorage.token, id).catch((error) => {
 						return null;
@@ -348,6 +359,7 @@
 								onThread={(id) => {
 									threadId = id;
 								}}
+								onPin={pinHandler}
 								onLoad={async () => {
 									const newMessages = await getChannelMessages(
 										localStorage.token,
@@ -407,6 +419,7 @@
 						<Thread
 							{threadId}
 							{channel}
+							onPin={pinHandler}
 							onClose={() => {
 								threadId = null;
 							}}
@@ -429,6 +442,7 @@
 					<Thread
 						{threadId}
 						{channel}
+						onPin={pinHandler}
 						onClose={() => {
 							threadId = null;
 						}}
