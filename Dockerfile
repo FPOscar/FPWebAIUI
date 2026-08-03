@@ -27,23 +27,17 @@ ARG GID=0
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
-# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
-
 WORKDIR /app
 
 # to store git revision in build
 RUN apk add --no-cache git
-
-# Set Node.js memory limit
-ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY package.json package-lock.json ./
 RUN npm ci --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=6144" npm run build
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
