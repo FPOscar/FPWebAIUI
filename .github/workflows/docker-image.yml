@@ -1,26 +1,143 @@
-name: Docker Image CI
+name: Build and deploy FPWebUI to Azure
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpwebui-production
+  cancel-in-progress: false
+
+env:
+  AZURE_RESOURCE_GROUP: RG_AI-Dev
+  AZURE_CONTAINER_APP: fpwebui-egress
+  AZURE_CONTAINER_REGISTRY: fpwebuicontainers
+  AZURE_CONTAINER_REGISTRY_SERVER: fpwebuicontainers.azurecr.io
+  IMAGE_REPOSITORY: fpwebui
+  APP_URL: https://fpwebui-egress.greenflower-703134aa.uksouth.azurecontainerapps.io
 
 jobs:
-  build-and-push:
+  deploy:
+    name: Build and deploy production
     runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out deploy source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Sign in to Azure with GitHub OIDC
+        uses: azure/login@8216e11d8cd9b42fe925c852af8e76311ff067ac # v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Record the current production image
+        id: current
+        shell: bash
+        run: |
+          set -euo pipefail
+          current_image="$(az containerapp show \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_CONTAINER_APP" \
+            --query 'properties.template.containers[0].image' \
+            --output tsv)"
+          test -n "$current_image"
+          echo "image=$current_image" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Azure Container Registry
-        run: echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} -u ${{ secrets.ACR_USERNAME }} --password-stdin
-
-      - name: Build Docker image
+        shell: bash
         run: |
-          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/fpwebui:${{ github.sha }}
-          docker build . -t $IMAGE
+          set -euo pipefail
+          az acr login --name "$AZURE_CONTAINER_REGISTRY"
 
-      - name: Push Docker image
+      - name: Build and push an immutable image
+        shell: bash
         run: |
-          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/fpwebui:${{ github.sha }}
-          docker push $IMAGE
+          set -euo pipefail
+          deploy_image="$AZURE_CONTAINER_REGISTRY_SERVER/$IMAGE_REPOSITORY:$GITHUB_SHA"
+          docker build --tag "$deploy_image" .
+          docker push "$deploy_image"
+          echo "DEPLOY_IMAGE=$deploy_image" >> "$GITHUB_ENV"
+
+      - name: Deploy the new Container App revision
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          az containerapp update \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_CONTAINER_APP" \
+            --image "$DEPLOY_IMAGE" \
+            --output none
+
+      - name: Verify the live revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready_image=""
+          ready_revision=""
+
+          for attempt in $(seq 1 60); do
+            ready_revision="$(az containerapp show \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$AZURE_CONTAINER_APP" \
+              --query 'properties.latestReadyRevisionName' \
+              --output tsv)"
+
+            if [ -n "$ready_revision" ]; then
+              ready_image="$(az containerapp revision show \
+                --resource-group "$AZURE_RESOURCE_GROUP" \
+                --name "$AZURE_CONTAINER_APP" \
+                --revision "$ready_revision" \
+                --query 'properties.template.containers[0].image' \
+                --output tsv)"
+            fi
+
+            if [ "$ready_image" = "$DEPLOY_IMAGE" ]; then
+              break
+            fi
+
+            sleep 10
+          done
+
+          if [ "$ready_image" != "$DEPLOY_IMAGE" ]; then
+            echo "The new image did not become the ready revision." >&2
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            --retry 12 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            "$APP_URL/health"
+
+          {
+            echo "### Azure deployment"
+            echo "- Revision: \`$ready_revision\`"
+            echo "- Image: \`$DEPLOY_IMAGE\`"
+            echo "- Health: passed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Roll back the image after a failed live verification
+        if: failure() && steps.deploy.outcome == 'success'
+        shell: bash
+        run: |
+          previous_image="${{ steps.current.outputs.image }}"
+          if [ -n "$previous_image" ]; then
+            echo "Rolling back to $previous_image"
+            az containerapp update \
+              --resource-group "$AZURE_RESOURCE_GROUP" \
+              --name "$AZURE_CONTAINER_APP" \
+              --image "$previous_image" \
+              --output none
+          fi
