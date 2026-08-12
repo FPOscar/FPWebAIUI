@@ -1,3 +1,5 @@
+import pytest
+
 from open_webui.utils.oauth_registration import (
     overlay_static_oauth_credentials,
     resolve_static_oauth_client_id,
@@ -110,3 +112,14 @@ def test_confidential_client_prefers_post_and_can_fall_back_to_basic():
         )
         == 'client_secret_basic'
     )
+
+
+def test_confidential_client_rejects_unsupported_advertised_methods():
+    with pytest.raises(
+        ValueError,
+        match='does not advertise a supported client-secret',
+    ):
+        select_static_token_endpoint_auth_method(
+            client_secret='client-secret',
+            supported_methods=['private_key_jwt', 'client_secret_jwt'],
+        )

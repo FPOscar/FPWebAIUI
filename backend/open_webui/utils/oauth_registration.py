@@ -44,11 +44,14 @@ def select_static_token_endpoint_auth_method(
         return 'none'
 
     preferred_method: TokenEndpointAuthMethod = 'client_secret_post'
-    if not supported_methods or preferred_method in supported_methods:
+    if supported_methods is None or preferred_method in supported_methods:
         return preferred_method
 
-    for method in ('client_secret_basic', 'client_secret_post'):
-        if method in supported_methods:
-            return method
+    if 'client_secret_basic' in supported_methods:
+        return 'client_secret_basic'
 
-    return preferred_method
+    advertised_methods = ', '.join(supported_methods) or 'none'
+    raise ValueError(
+        'Authorization server does not advertise a supported client-secret '
+        f'token endpoint authentication method (advertised: {advertised_methods})'
+    )
