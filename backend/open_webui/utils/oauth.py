@@ -88,6 +88,10 @@ from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
+from open_webui.utils.oauth_registration import (
+    overlay_static_oauth_credentials,
+    select_static_token_endpoint_auth_method,
+)
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
 
@@ -635,7 +639,7 @@ async def get_oauth_client_info_with_static_credentials(
     client_id: str,
     oauth_server_url: str,
     oauth_client_id: str,
-    oauth_client_secret: str,
+    oauth_client_secret: str | None,
     oauth_scope: str | None = None,
 ) -> OAuthClientInformationFull:
     """
@@ -675,18 +679,19 @@ async def get_oauth_client_info_with_static_credentials(
             ' '.join(resource_metadata.scopes_supported) if resource_metadata.scopes_supported else None
         )
 
-        # Determine token_endpoint_auth_method
-        token_endpoint_auth_method = 'client_secret_post'
-        if (
-            oauth_server_metadata
-            and oauth_server_metadata.token_endpoint_auth_methods_supported
-            and token_endpoint_auth_method not in oauth_server_metadata.token_endpoint_auth_methods_supported
-        ):
-            token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
+        client_secret = oauth_client_secret or None
+        token_endpoint_auth_method = select_static_token_endpoint_auth_method(
+            client_secret=client_secret,
+            supported_methods=(
+                oauth_server_metadata.token_endpoint_auth_methods_supported
+                if oauth_server_metadata
+                else None
+            ),
+        )
 
         oauth_client_info = OAuthClientInformationFull(
             client_id=oauth_client_id,
-            client_secret=oauth_client_secret,
+            client_secret=client_secret,
             redirect_uris=[redirect_uri],
             grant_types=['authorization_code', 'refresh_token'],
             response_types=['code'],
@@ -717,9 +722,11 @@ def resolve_oauth_client_info(connection: dict) -> dict:
     data = decrypt_data(info.get('oauth_client_info', ''))
 
     if connection.get('auth_type') == 'oauth_2.1_static':
-        if info.get('oauth_client_id') and info.get('oauth_client_secret'):
-            data['client_id'] = info['oauth_client_id']
-            data['client_secret'] = info['oauth_client_secret']
+        data = overlay_static_oauth_credentials(
+            client_data=data,
+            oauth_client_id=info.get('oauth_client_id'),
+            oauth_client_secret=info.get('oauth_client_secret'),
+        )
 
     return data
 

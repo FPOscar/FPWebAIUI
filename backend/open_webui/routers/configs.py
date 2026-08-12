@@ -26,6 +26,10 @@ from open_webui.utils.oauth import (
     recover_static_oauth_client_metadata,
     resolve_oauth_client_info,
 )
+from open_webui.utils.oauth_registration import (
+    resolve_static_oauth_client_id,
+    uses_static_oauth_registration,
+)
 from open_webui.utils.tools import (
     bearer_auth_header,
     get_tool_server_data,
@@ -164,6 +168,7 @@ class OAuthClientRegistrationForm(BaseModel):
     url: str
     client_id: str
     client_name: str | None = None
+    oauth_client_id: str | None = None
     client_secret: str | None = None
     oauth_server_url: str | None = None
     oauth_scope: str | None = None
@@ -183,13 +188,19 @@ async def register_oauth_client(
 
         oauth_server_url = form_data.oauth_server_url if form_data.oauth_server_url else form_data.url
 
-        if form_data.client_secret:
+        if uses_static_oauth_registration(
+            oauth_client_id=form_data.oauth_client_id,
+            client_secret=form_data.client_secret,
+        ):
             # Static credentials: skip dynamic registration, build from provided credentials
             oauth_client_info = await get_oauth_client_info_with_static_credentials(
                 request,
                 oauth_client_id,
                 oauth_server_url,
-                oauth_client_id=form_data.client_id,
+                oauth_client_id=resolve_static_oauth_client_id(
+                    connection_id=form_data.client_id,
+                    oauth_client_id=form_data.oauth_client_id,
+                ),
                 oauth_client_secret=form_data.client_secret,
                 oauth_scope=form_data.oauth_scope,
             )
