@@ -520,6 +520,7 @@ type RegisterOAuthClientForm = {
 	url: string;
 	client_id: string;
 	client_name?: string;
+	oauth_client_id?: string;
 	client_secret?: string;
 	oauth_server_url?: string;
 	oauth_scope?: string;

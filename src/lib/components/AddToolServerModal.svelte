@@ -85,17 +85,17 @@
 			return;
 		}
 
-		if (auth_type === 'oauth_2.1_static' && (!oauthClientId || !oauthClientSecret)) {
-			toast.error($i18n.t('Please enter Client ID and Client Secret'));
+		if (auth_type === 'oauth_2.1_static' && !oauthClientId) {
+			toast.error($i18n.t('Please enter Client ID'));
 			return;
 		}
 
 		// client_id is the tool server ID (used as the internal lookup key for both flows).
-		// For static, client_secret signals the backend to use the static credential path.
-		// The actual OAuth client_id/secret come from the connection info at save time.
+		// oauth_client_id is the provider-issued ID and selects the static credential path.
 		const formData: {
 			url: string;
 			client_id: string;
+			oauth_client_id?: string;
 			client_secret?: string;
 			oauth_server_url?: string;
 			oauth_scope?: string;
@@ -104,7 +104,11 @@
 			client_id: id,
 			...(oauthScope ? { oauth_scope: oauthScope } : {}),
 			...(auth_type === 'oauth_2.1_static'
-				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
+				? {
+						oauth_client_id: oauthClientId,
+						...(oauthClientSecret ? { client_secret: oauthClientSecret } : {}),
+						...(oauthServerUrl ? { oauth_server_url: oauthServerUrl } : {})
+					}
 				: {})
 		};
 
@@ -368,8 +372,8 @@
 				...(auth_type === 'oauth_2.1_static'
 					? {
 							oauth_client_id: oauthClientId,
-							oauth_client_secret: oauthClientSecret,
-							oauth_server_url: oauthServerUrl
+							...(oauthClientSecret ? { oauth_client_secret: oauthClientSecret } : {}),
+							...(oauthServerUrl ? { oauth_server_url: oauthServerUrl } : {})
 						}
 					: {})
 			}
@@ -746,7 +750,7 @@
 												/>
 												<SensitiveInput
 													bind:value={oauthClientSecret}
-													placeholder={$i18n.t('Client Secret')}
+													placeholder={$i18n.t('Client Secret (optional)')}
 													required={false}
 												/>
 												<div class="flex flex-1 items-center">
