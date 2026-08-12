@@ -1,4 +1,5 @@
 from open_webui.utils.oauth_registration import (
+    overlay_static_oauth_credentials,
     resolve_static_oauth_client_id,
     select_static_token_endpoint_auth_method,
     uses_static_oauth_registration,
@@ -37,6 +38,51 @@ def test_provider_client_id_wins_with_legacy_connection_id_fallback():
         )
         == 'legacy-connection'
     )
+
+
+def test_saved_confidential_credentials_are_preserved_from_encrypted_data():
+    resolved = overlay_static_oauth_credentials(
+        client_data={
+            'client_id': 'provider-client-id',
+            'client_secret': 'encrypted-secret',
+            'token_endpoint_auth_method': 'client_secret_post',
+        },
+        oauth_client_id='provider-client-id',
+        oauth_client_secret=None,
+    )
+
+    assert resolved['client_secret'] == 'encrypted-secret'
+    assert resolved['token_endpoint_auth_method'] == 'client_secret_post'
+
+
+def test_saved_public_credentials_remain_secretless():
+    resolved = overlay_static_oauth_credentials(
+        client_data={
+            'client_id': 'provider-client-id',
+            'client_secret': None,
+            'token_endpoint_auth_method': 'none',
+        },
+        oauth_client_id='provider-client-id',
+        oauth_client_secret=None,
+    )
+
+    assert resolved['client_secret'] is None
+    assert resolved['token_endpoint_auth_method'] == 'none'
+
+
+def test_explicit_static_credentials_override_encrypted_values():
+    resolved = overlay_static_oauth_credentials(
+        client_data={
+            'client_id': 'old-client-id',
+            'client_secret': 'old-secret',
+            'token_endpoint_auth_method': 'client_secret_post',
+        },
+        oauth_client_id='new-client-id',
+        oauth_client_secret='new-secret',
+    )
+
+    assert resolved['client_id'] == 'new-client-id'
+    assert resolved['client_secret'] == 'new-secret'
 
 
 def test_public_client_uses_none_even_when_server_metadata_omits_it():

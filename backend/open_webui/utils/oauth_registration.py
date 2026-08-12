@@ -20,6 +20,22 @@ def resolve_static_oauth_client_id(
     return oauth_client_id or connection_id
 
 
+def overlay_static_oauth_credentials(
+    *,
+    client_data: dict,
+    oauth_client_id: str | None,
+    oauth_client_secret: str | None,
+) -> dict:
+    """Overlay explicitly stored credentials without erasing encrypted values."""
+    if oauth_client_id:
+        client_data['client_id'] = oauth_client_id
+
+    if oauth_client_secret:
+        client_data['client_secret'] = oauth_client_secret
+
+    return client_data
+
+
 def select_static_token_endpoint_auth_method(
     *, client_secret: str | None, supported_methods: Sequence[str] | None = None
 ) -> TokenEndpointAuthMethod:

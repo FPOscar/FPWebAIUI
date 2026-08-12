@@ -88,7 +88,10 @@ from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.utils.auth import create_token, get_password_hash
 from open_webui.utils.groups import apply_default_group_assignment
 from open_webui.utils.misc import parse_duration
-from open_webui.utils.oauth_registration import select_static_token_endpoint_auth_method
+from open_webui.utils.oauth_registration import (
+    overlay_static_oauth_credentials,
+    select_static_token_endpoint_auth_method,
+)
 from open_webui.utils.validate import validate_profile_image_url
 from starlette.responses import RedirectResponse
 
@@ -719,14 +722,11 @@ def resolve_oauth_client_info(connection: dict) -> dict:
     data = decrypt_data(info.get('oauth_client_info', ''))
 
     if connection.get('auth_type') == 'oauth_2.1_static':
-        if info.get('oauth_client_id'):
-            data['client_id'] = info['oauth_client_id']
-
-        if info.get('oauth_client_secret'):
-            data['client_secret'] = info['oauth_client_secret']
-        elif info.get('oauth_client_id'):
-            data['client_secret'] = None
-            data['token_endpoint_auth_method'] = 'none'
+        data = overlay_static_oauth_credentials(
+            client_data=data,
+            oauth_client_id=info.get('oauth_client_id'),
+            oauth_client_secret=info.get('oauth_client_secret'),
+        )
 
     return data
 
