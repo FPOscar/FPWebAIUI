@@ -19,8 +19,8 @@ from open_webui.models.models import Models
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
-from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.model_cache import has_model_cache, update_model_cache
 from open_webui.utils.plugin import (
     get_functions_cache,
     get_function_module_from_cache,
@@ -72,7 +72,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
         'models.default_metadata',
     )
     if (
-        request.app.state.MODELS
+        has_model_cache(request)
         and request.app.state.BASE_MODELS
         and (config.get('models.base_models_cache') and not refresh)
     ):
@@ -416,14 +416,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     log.debug(f'get_all_models() returned {len(models)} models')
 
     models_dict = {model['id']: model for model in models}
-    if isinstance(request.app.state.MODELS, RedisDict):
-        try:
-            request.app.state.MODELS.set(models_dict)
-        except Exception as e:
-            log.warning(f'Failed to update Redis model cache, using in-process cache: {e}')
-            request.app.state.MODELS = models_dict
-    else:
-        request.app.state.MODELS = models_dict
+    update_model_cache(request, models_dict)
 
     return models
 

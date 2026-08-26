@@ -2245,7 +2245,7 @@ async def connect_mcp_server(
     return client, tool_specs
 
 
-async def process_chat_payload(request, form_data, user, metadata, model):
+async def process_chat_payload(request, form_data, user, metadata, model, models):
     # Ensure chat_id is always a string — external API clients may omit it.
     if not isinstance(metadata.get('chat_id'), str):
         metadata['chat_id'] = ''
@@ -2263,7 +2263,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if arena_model_ids and arena_filter_mode == 'exclude':
             arena_model_ids = [
                 available_model['id']
-                for available_model in request.app.state.MODELS.values()
+                for available_model in models.values()
                 if available_model.get('owned_by') != 'arena' and available_model['id'] not in arena_model_ids
             ]
 
@@ -2272,12 +2272,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         else:
             arena_model_ids = [
                 available_model['id']
-                for available_model in request.app.state.MODELS.values()
+                for available_model in models.values()
                 if available_model.get('owned_by') != 'arena'
             ]
             selected_model_id = random.choice(arena_model_ids)
 
-        selected_model = request.app.state.MODELS.get(selected_model_id)
+        selected_model = models.get(selected_model_id)
         if selected_model:
             model = selected_model
             form_data['model'] = selected_model_id
@@ -2347,11 +2347,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if is_saved_chat_id(chat_id) and user_message_id:
         if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
             compaction_models = {
-                **request.app.state.MODELS,
+                **models,
                 request.state.model['id']: request.state.model,
             }
         else:
-            compaction_models = request.app.state.MODELS
+            compaction_models = models
 
         system_message = get_system_message(form_data.get('messages', []))
         system_prompt = get_content_from_message(system_message) if system_message else ''
@@ -2415,9 +2415,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         models = {
             request.state.model['id']: request.state.model,
         }
-    else:
-        models = request.app.state.MODELS
-
     task_model_id = get_task_model_id(
         form_data['model'],
         await Config.get('task.model.default'),
@@ -3005,7 +3002,7 @@ async def get_event_emitter_and_caller(metadata):
     return event_emitter, event_caller
 
 
-async def build_chat_response_context(request, form_data, user, model, metadata, tasks, events):
+async def build_chat_response_context(request, form_data, user, model, metadata, tasks, events, models):
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
     return {
         'request': request,
@@ -3015,6 +3012,7 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
         'metadata': metadata,
         'tasks': tasks,
         'events': events,
+        'models': models,
         'event_emitter': event_emitter,
         'event_caller': event_caller,
     }
@@ -3495,7 +3493,7 @@ async def outlet_filter_handler(ctx):
         }
 
         # Pipeline outlet filters
-        models = request.app.state.MODELS
+        models = ctx['models']
         try:
             outlet_data = await process_pipeline_outlet_filter(request, outlet_data, user, models)
         except Exception as e:
@@ -3754,6 +3752,7 @@ async def streaming_chat_response_handler(response, ctx):
 
     user = ctx['user']
     model = ctx['model']
+    models = ctx['models']
 
     metadata = ctx['metadata']
     events = ctx['events']
@@ -5609,7 +5608,7 @@ async def streaming_chat_response_handler(response, ctx):
                     model_id = model.get('id') if isinstance(model, dict) else model
                     has_api_outlet_filters = bool(
                         (isinstance(model, dict) and 'pipeline' in model)
-                        or get_sorted_filters(model_id, request.app.state.MODELS)
+                        or get_sorted_filters(model_id, models)
                     )
                 except Exception:
                     has_api_outlet_filters = True
