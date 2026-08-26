@@ -237,6 +237,7 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
+from open_webui.utils.model_cache import get_model_from_cache_or_refresh
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -1056,8 +1057,31 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    if not request.app.state.MODELS:
-        await get_all_models(request, user=user)
+    request_models = {}
+    models_refreshed = False
+
+    async def refresh_models():
+        return await get_all_models(request, refresh=True, user=user)
+
+    async def resolve_request_model(model_to_resolve: str):
+        nonlocal request_models, models_refreshed
+
+        if model_to_resolve in request_models:
+            return request_models[model_to_resolve]
+
+        if models_refreshed:
+            return None
+
+        resolved_model, refreshed_models = await get_model_from_cache_or_refresh(
+            request,
+            model_to_resolve,
+            refresh_models,
+        )
+        if refreshed_models is not None:
+            request_models = refreshed_models
+            models_refreshed = True
+
+        return resolved_model
 
     model_id = form_data.get('model', None)
     model_item = form_data.pop('model_item', {})
@@ -1067,10 +1091,10 @@ async def chat_completion(
     try:
         model_info = None
         if not model_item.get('direct', False):
-            if model_id not in request.app.state.MODELS:
+            model = await resolve_request_model(model_id)
+            if model is None:
                 raise Exception('Model not found')
 
-            model = request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
 
             # Check if user has access to the model
@@ -1099,15 +1123,20 @@ async def chat_completion(
         # Check base model existence for custom models
         if model_info and model_info.base_model_id:
             base_model_id = model_info.base_model_id
-            if base_model_id not in request.app.state.MODELS:
+            if await resolve_request_model(base_model_id) is None:
                 if ENABLE_CUSTOM_MODEL_FALLBACK:
                     default_models = ((await Config.get('ui.default_models')) or '').split(',')
 
                     fallback_model_id = default_models[0].strip() if default_models[0] else None
 
-                    if fallback_model_id and fallback_model_id in request.app.state.MODELS:
+                    fallback_model = (
+                        await resolve_request_model(fallback_model_id)
+                        if fallback_model_id
+                        else None
+                    )
+                    if fallback_model is not None:
                         # Update model and form_data so routing uses the fallback model's type
-                        model = request.app.state.MODELS[fallback_model_id]
+                        model = fallback_model
                         form_data['model'] = fallback_model_id
                     else:
                         raise Exception('Model not found')
@@ -1727,7 +1756,7 @@ async def chat_completion(
             }
 
             # Resolve the model object for this specific model
-            resolved_model = request.app.state.MODELS.get(target_model_id, model)
+            resolved_model = await resolve_request_model(target_model_id) or model
 
             # Only the first model runs chat-level background tasks;
             # subsequent models only run follow-ups.
