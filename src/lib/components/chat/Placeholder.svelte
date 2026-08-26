@@ -18,7 +18,7 @@
 		selectedFolder,
 		theme
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -55,13 +55,27 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let toolApprovalMode = 'full';
+	export let onToolApprovalModeChange: Function = () => {};
+	export let oauthRedirectHandler: Function = () => {};
 
 	export let onUpload: Function = (e) => {};
+	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let onSelect = (e) => {};
 	export let onChange = (e) => {};
 	export let onWebSearchToggle: Function = () => {};
-
-	export let toolServers = [];
+	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
+	export let onQueueSendNow: (id: string) => void = () => {};
+	export let onQueueEdit: (id: string) => void = () => {};
+	export let onQueueDelete: (id: string) => void = () => {};
+	export let askUser = {
+		show: false,
+		questions: [],
+		allowOther: true,
+		timeoutMs: null,
+		onConfirm: (_value: any) => {},
+		onCancel: () => {}
+	};
 
 	export let dragged = false;
 
@@ -81,7 +95,7 @@
 		$selectedFolder.permission !== 'write';
 </script>
 
-<div class="m-auto w-full max-w-[58rem] px-2 @2xl:px-20 translate-y-6 py-24 text-center">
+<div class="m-auto w-full max-w-[58rem] px-1 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
@@ -111,11 +125,11 @@
 				<FolderTitle
 					folder={$selectedFolder}
 					readOnly={folderReadOnly}
-					onUpdate={async (folder) => {
-						await refreshChatList(localStorage.token);
+					onUpdate={async () => {
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 					}}
 					onDelete={async () => {
-						await refreshChatList(localStorage.token);
+						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 
 						selectedFolder.set(null);
 					}}
@@ -146,6 +160,9 @@
 											aria-hidden="true"
 											draggable="false"
 											on:error={(e) => {
+												// LICENSE covers this Open WebUI fallback logo.
+												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+												// https://docs.openwebui.com/license.
 												e.currentTarget.src = '/favicon.png';
 											}}
 										/>
@@ -242,12 +259,20 @@
 						bind:showCommands
 						bind:dragged
 						{pendingOAuthTools}
-						{toolServers}
+						{oauthRedirectHandler}
+						{toolApprovalMode}
+						{onToolApprovalModeChange}
 						{stopResponse}
 						{createMessagePair}
 						placeholder={$i18n.t('How can I help you today?')}
 						{onChange}
 						{onUpload}
+						{onUpdate}
+						{messageQueue}
+						{onQueueSendNow}
+						{onQueueEdit}
+						{onQueueDelete}
+						{askUser}
 						{onWebSearchToggle}
 						on:chatVariables
 						on:submit={(e) => {
