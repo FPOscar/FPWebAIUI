@@ -23,6 +23,10 @@ class FakeModelCache:
         self._raise_if_unavailable()
         return len(self.values)
 
+    def items(self):
+        self._raise_if_unavailable()
+        return self.values.items()
+
     def set(self, mapping):
         self._raise_if_unavailable()
         self.values = mapping
@@ -42,6 +46,7 @@ def test_redis_read_failure_uses_last_in_process_model_cache():
     request = make_request(cache, {'gpt-test': expected})
 
     assert model_cache.has_model_cache(request)
+    assert model_cache.get_models_from_cache(request) == {'gpt-test': expected}
     assert model_cache.get_model_from_cache(request, 'gpt-test') is expected
 
 
@@ -77,6 +82,7 @@ def test_model_cache_miss_refreshes_and_returns_request_local_mapping():
         model_cache.get_model_from_cache_or_refresh(
             request,
             'gpt-test',
+            {},
             refresh_models,
         )
     )
@@ -84,3 +90,25 @@ def test_model_cache_miss_refreshes_and_returns_request_local_mapping():
     assert model is expected
     assert refreshed_models == {'gpt-test': expected}
     assert calls == ['refresh']
+
+
+def test_unknown_model_in_populated_cache_does_not_refresh_providers():
+    request = make_request(FakeModelCache(values={'known-model': {'id': 'known-model'}}))
+    calls = []
+
+    async def refresh_models():
+        calls.append('refresh')
+        return []
+
+    model, refreshed_models = asyncio.run(
+        model_cache.get_model_from_cache_or_refresh(
+            request,
+            'unknown-model',
+            model_cache.get_models_from_cache(request),
+            refresh_models,
+        )
+    )
+
+    assert model is None
+    assert refreshed_models is None
+    assert calls == []

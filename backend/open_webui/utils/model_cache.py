@@ -15,6 +15,18 @@ def has_model_cache(request: Request) -> bool:
         return bool(fallback)
 
 
+def get_models_from_cache(request: Request) -> dict:
+    """Snapshot the shared cache, falling back locally only when Redis is unavailable."""
+    try:
+        models = request.app.state.MODELS
+        if isinstance(models, dict):
+            return dict(models)
+        return dict(models.items())
+    except Exception as e:
+        log.warning(f'Failed to snapshot Redis model cache, using in-process cache: {e}')
+        return dict(getattr(request.app.state, 'LOCAL_MODELS', {}))
+
+
 def get_model_from_cache(request: Request, model_id: str):
     """Read one model without letting a transient Redis failure break chat routing."""
     try:
@@ -31,6 +43,7 @@ def get_model_from_cache(request: Request, model_id: str):
 async def get_model_from_cache_or_refresh(
     request: Request,
     model_id: str,
+    cached_models: dict,
     refresh_models,
 ):
     """Resolve a model, refreshing once when the shared cache misses it.
@@ -38,9 +51,14 @@ async def get_model_from_cache_or_refresh(
     The refreshed mapping is returned with the selected model so the caller can
     continue using the request-local result even if the Redis write failed.
     """
-    model = get_model_from_cache(request, model_id)
+    model = cached_models.get(model_id)
     if model is not None:
         return model, None
+
+    # Provider discovery is expensive. A populated cache is authoritative for
+    # unknown IDs; refresh only when shared/local state is empty after a restart.
+    if cached_models:
+        return None, None
 
     models = await refresh_models()
     models_dict = {item['id']: item for item in models}

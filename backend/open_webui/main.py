@@ -237,7 +237,10 @@ from open_webui.utils.middleware import (
     process_chat_payload,
     process_chat_response,
 )
-from open_webui.utils.model_cache import get_model_from_cache_or_refresh
+from open_webui.utils.model_cache import (
+    get_model_from_cache_or_refresh,
+    get_models_from_cache,
+)
 from open_webui.utils.model_ids import strip_provider_model_prefix
 from open_webui.utils.models import (
     check_model_access,
@@ -1057,7 +1060,7 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    request_models = {}
+    request_models = get_models_from_cache(request)
     models_refreshed = False
 
     async def refresh_models():
@@ -1075,6 +1078,7 @@ async def chat_completion(
         resolved_model, refreshed_models = await get_model_from_cache_or_refresh(
             request,
             model_to_resolve,
+            request_models,
             refresh_models,
         )
         if refreshed_models is not None:
@@ -1575,7 +1579,14 @@ async def chat_completion(
 
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
         try:
-            form_data, metadata, events = await process_chat_payload(request, form_data, user, metadata, model)
+            form_data, metadata, events = await process_chat_payload(
+                request,
+                form_data,
+                user,
+                metadata,
+                model,
+                request_models,
+            )
 
             response = await chat_completion_handler(request, form_data, user)
 
@@ -1594,7 +1605,16 @@ async def chat_completion(
                     detail = f'Provider returned HTTP {response.status_code}'
                 raise Exception(detail)
 
-            ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, events)
+            ctx = await build_chat_response_context(
+                request,
+                form_data,
+                user,
+                model,
+                metadata,
+                tasks,
+                events,
+                request_models,
+            )
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
