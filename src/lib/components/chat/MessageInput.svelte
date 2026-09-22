@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
+	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
 	import { toast } from 'svelte-sonner';
 
@@ -30,6 +32,7 @@
 		showCallOverlay,
 		tools,
 		skills,
+		terminalSkills,
 		toolServers,
 		terminalServers,
 		user as _user,
@@ -55,10 +58,11 @@
 		getUsageTokenCount,
 		getUserPosition,
 		getUserTimezone,
-		getWeekday
+		getWeekday,
+		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import { getCwd, uploadToTerminal } from '$lib/apis/terminal';
+	import { getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
@@ -68,6 +72,7 @@
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
+	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 
 	import { createNoteHandler } from '../notes/utils';
 	import { getSuggestionRenderer } from '../common/RichTextInput/suggestions';
@@ -114,7 +119,7 @@
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n: any = getContext('i18n');
 
 	type AskUserPrompt = {
 		show: boolean;
@@ -171,6 +176,12 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: hasChatContent = history?.currentId
+		? createMessagesList(history, history.currentId).some(
+				(message) =>
+					!!message?.content || !!message?.tool_calls || !!message?.files || !!message?.models
+			)
+		: false;
 	$: canToggleTemporary =
 		!embedded &&
 		!chatId &&
@@ -569,10 +580,16 @@
 		}
 
 		if ($temporaryChatEnabled) {
-			window.history.replaceState(null, '', '?temporary-chat=true');
+			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
 		} else {
-			window.history.replaceState(null, '', location.pathname);
+			window.history.replaceState(window.history.state, '', location.pathname);
 		}
+	};
+
+	const createSkillHandler = async () => {
+		prompt = '/skills:create';
+		await tick();
+		dispatch('submit', prompt);
 	};
 
 	const insertTextAtCursor = async (text: string) => {
@@ -674,6 +691,7 @@
 	$: showCommands =
 		['/', '#', '@', '$', ':'].includes(command?.charAt(0)) || '\\#' === command?.slice(0, 2);
 	let suggestions = null;
+	$: atSelectedModelName = resolveLocalizedModelName(atSelectedModel, $i18n.language);
 
 	let showTools = false;
 	let showSkills = false;
@@ -800,7 +818,9 @@
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
 
 	let showSkillsButton = false;
-	$: showSkillsButton = ($skills ?? []).some((skill) => skill.is_active);
+	$: showSkillsButton =
+		($skills ?? []).some((skill) => skill.is_active) ||
+		($terminalSkills ?? []).some((skill) => skill.is_active);
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -944,7 +964,7 @@
 							chatId || undefined
 						)
 					)?.cwd || '/';
-				const uploadedFile = await uploadToTerminal(
+				const uploadedFile = await uploadNewFileToTerminal(
 					filesystemUploadTerminal.url,
 					filesystemUploadTerminal.key,
 					cwd,
@@ -955,6 +975,7 @@
 				if (uploadedFile) {
 					fileItem.type = 'filesystem';
 					fileItem.status = 'uploaded';
+					fileItem.name = uploadedFile.path.split('/').pop() || file.name;
 					fileItem.id = uploadedFile.path;
 					fileItem.path = uploadedFile.path;
 					fileItem.url = uploadedFile.path;
@@ -1103,7 +1124,7 @@
 				return;
 			}
 
-			if (file['type'].startsWith('image/')) {
+			if (isRasterImageContentType(file['type'])) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -1411,7 +1432,17 @@
 						return;
 					}
 
-					if (['compact', 'fork', 'status', 'model', 'settings', 'temporary'].includes(props?.id)) {
+					if (
+						[
+							'compact',
+							'fork',
+							'status',
+							'model',
+							'settings',
+							'temporary',
+							'skills:create'
+						].includes(props?.id)
+					) {
 						editor.chain().focus().deleteRange(range).run();
 						return;
 					}
@@ -1438,6 +1469,7 @@
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
+					hasChatContent: hasChatContent,
 					temporaryEnabled: () => $temporaryChatEnabled === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
@@ -1446,6 +1478,7 @@
 					onModel: () => modelSelector?.open(),
 					onSettings: () => showSettings.set(true),
 					onTemporary: temporaryHandler,
+					onCreateSkill: createSkillHandler,
 					onSelect: (e) => {
 						const { type, data } = e;
 
@@ -1536,7 +1569,10 @@
 				command: ({ editor, range, props }) => {
 					// Convert the Unicode hex codepoint (e.g. "1F44B") to the actual emoji character (👋)
 					const codepoint = props.id;
-					const emoji = String.fromCodePoint(parseInt(codepoint, 16));
+					const emoji = codepoint
+						.split('-')
+						.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+						.join('');
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
@@ -1730,6 +1766,7 @@
 					>
 						<button
 							id="generate-message-pair-button"
+							type="button"
 							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
 							on:click={() => createMessagePair(prompt)}
@@ -1781,7 +1818,7 @@
 							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-gray-900">
 								<div class="flex items-center justify-between px-3 py-1.5">
 									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-										<span>Status</span>
+										<span>{$i18n.t('Status')}</span>
 									</div>
 
 									<button
@@ -1791,14 +1828,14 @@
 											showStatusPanel = false;
 										}}
 									>
-										Close
+										{$i18n.t('Close')}
 									</button>
 								</div>
 
 								<div class="space-y-0.5 px-3 pb-2">
 									<div class="rounded-xl py-0.5 text-gray-600 dark:text-gray-400">
 										<div class="flex min-h-4 items-center gap-3">
-											<span class="min-w-0 flex-1 truncate">Context usage</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
 											<span
 												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
 											>
@@ -1819,7 +1856,7 @@
 
 									{#if messageQueue.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-											<span class="min-w-0 flex-1 truncate">Queued messages</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Queued messages')}</span>
 											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
 												{messageQueue.length}
 											</span>
@@ -1828,7 +1865,7 @@
 
 									{#if chatTasks.length}
 										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-											<span class="min-w-0 flex-1 truncate">Tasks</span>
+											<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
 											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
 												{chatTasks.length}
 											</span>
@@ -1836,7 +1873,7 @@
 									{/if}
 
 									<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
-										<span class="min-w-0 flex-1 truncate">Chat ID</span>
+										<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
 										{#if chatId}
 											<button
 												type="button"
@@ -1870,12 +1907,12 @@
 									<div class="flex items-center justify-between w-full">
 										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm dark:text-gray-500">
 											<img
-												alt="model profile"
+												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
 												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
 											/>
 											<div class="translate-y-[0.5px]">
-												<span class="">{atSelectedModel.name}</span>
+												<span class="">{atSelectedModelName}</span>
 											</div>
 										</div>
 										<div>
@@ -1898,7 +1935,7 @@
 									dir={$settings?.chatDirection ?? 'auto'}
 								>
 									{#each files as file, fileIdx}
-										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
+										{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 											{@const fileUrl =
 												file.url.startsWith('data') || file.url.startsWith('http')
 													? file.url
@@ -1992,7 +2029,7 @@
 									<button
 										type="button"
 										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
-										aria-label="Expand input"
+										aria-label={$i18n.t('Expand input')}
 										on:click={() => {
 											showInputModal = true;
 										}}
@@ -2025,6 +2062,11 @@
 													json={true}
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
+													followUpSuggestion={!generating &&
+													history?.messages?.[history?.currentId]?.role === 'assistant' &&
+													history?.messages?.[history?.currentId]?.done
+														? (history.messages[history.currentId].followUps?.[0] ?? '')
+														: ''}
 													showFormattingToolbar={$settings?.showFormattingToolbar ?? false}
 													floatingMenuPlacement={'top-start'}
 													insertPromptAsRichText={$settings?.insertPromptAsRichText ?? false}
@@ -2331,7 +2373,7 @@
 												>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-														aria-label="Available Tools"
+														aria-label={$i18n.t('Available Tools')}
 														type="button"
 														on:click={() => {
 															showTools = !showTools;
@@ -2354,7 +2396,7 @@
 												>
 													<button
 														class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
-														aria-label="Available Skills"
+														aria-label={$i18n.t('Available Skills')}
 														type="button"
 														on:click={() => {
 															showSkills = !showSkills;
@@ -2372,7 +2414,14 @@
 											{#each selectedFilterIds as filterId (filterId)}
 												{@const filter = toggleFilters.find((f) => f.id === filterId)}
 												{#if filter}
-													<Tooltip content={filter?.name} placement="top">
+													<Tooltip
+														content={resolveLocalizedFunction(
+															filter,
+															$localizedFunctions,
+															$i18n.language
+														)}
+														placement="top"
+													>
 														<button
 															on:click|preventDefault={() => {
 																if (
@@ -2404,7 +2453,11 @@
 																			? 'dark:invert-[80%]'
 																			: ''}"
 																		style="fill: currentColor;"
-																		alt={filter.name}
+																		alt={resolveLocalizedFunction(
+																			filter,
+																			$localizedFunctions,
+																			$i18n.language
+																		)}
 																	/>
 																</div>
 															{:else}
@@ -2608,7 +2661,7 @@
 																toast.error($i18n.t('Permission denied when accessing microphone'));
 															}
 														}}
-														aria-label="Voice Input"
+														aria-label={$i18n.t('Voice Input')}
 													>
 														<Mic className="size-[1.125rem]" />
 													</button>

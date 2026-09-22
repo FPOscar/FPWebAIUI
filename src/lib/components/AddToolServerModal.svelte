@@ -6,7 +6,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -36,7 +36,7 @@
 	export let edit = false;
 
 	export let direct = false;
-	export let connection = null;
+	export let connection: any = null;
 
 	let inputElement = null;
 
@@ -49,6 +49,7 @@
 	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
+	let forwardCookies = false;
 	let key = '';
 	let headers = '';
 
@@ -268,6 +269,7 @@
 				if (data.path) path = data.path;
 
 				if (data.auth_type) auth_type = data.auth_type;
+				forwardCookies = data.forward_cookies ?? false;
 				if (data.headers) headers = JSON.stringify(data.headers, null, 2);
 				if (data.key) key = data.key;
 
@@ -304,6 +306,7 @@
 				path,
 
 				auth_type,
+				...(!direct && ['', 'openapi'].includes(type) ? { forward_cookies: forwardCookies } : {}),
 				headers: headers ? JSON.parse(headers) : undefined,
 				key,
 
@@ -384,6 +387,7 @@
 			path,
 
 			auth_type,
+			...(!direct && ['', 'openapi'].includes(type) ? { forward_cookies: forwardCookies } : {}),
 			headers: headers ? JSON.parse(headers) : undefined,
 
 			key,
@@ -428,6 +432,7 @@
 
 		key = '';
 		auth_type = 'bearer';
+		forwardCookies = false;
 
 		id = '';
 		name = '';
@@ -446,6 +451,7 @@
 	};
 
 	const init = () => {
+		forwardCookies = connection?.forward_cookies ?? false;
 		if (connection) {
 			type = connection?.type ?? 'openapi';
 			url = connection.url;
@@ -557,15 +563,15 @@
 											class=" text-xs text-gray-700 dark:text-gray-300"
 										>
 											{#if ['', 'openapi'].includes(type)}
-												{$i18n.t('OpenAPI')}
+												{$i18n.t('settings.admin.integrations.openApi.label')}
 											{:else if type === 'mcp'}
-												{$i18n.t('MCP')}
+												{$i18n.t('settings.admin.integrations.mcp.label')}
 												<span class="text-gray-500">{$i18n.t('Streamable HTTP')}</span>
 											{/if}
 										</button>
 									{:else}
 										<div class="text-xs text-gray-700 dark:text-gray-300">
-											{$i18n.t('OpenAPI')}
+											{$i18n.t('settings.personal.tools.openApi.label')}
 										</div>
 									{/if}
 								</div>
@@ -852,6 +858,24 @@
 						</div>
 
 						{#if showAdvanced}
+							{#if !direct && ['', 'openapi'].includes(type)}
+								<div class="flex items-center justify-between gap-3 mt-2">
+									<div>
+										<label for="forward-cookies" class="text-xs text-gray-500">
+											{$i18n.t('Forward cookies')}
+										</label>
+										<p class="text-xs text-gray-500">
+											{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
+										</p>
+									</div>
+									<Switch
+										id="forward-cookies"
+										ariaLabel={$i18n.t('Forward cookies')}
+										bind:state={forwardCookies}
+									/>
+								</div>
+							{/if}
+
 							{#if ['', 'openapi'].includes(type)}
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
